@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import twitterLogo from './assets/twitter-logo.svg';
 import SelectCharacter from './Components/SelectCharacter';
+import { CONTRACT_ADDRESS, transformCharacterData } from './constants';
+import myEpicGame from './utils/MyEpicGame.json';
+import { ethers } from 'ethers';
 // Constants
-const TWITTER_HANDLE = '_buildspace';
+const TWITTER_HANDLE = 'sansildev';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 
 const App = () => {
@@ -67,8 +70,45 @@ const App = () => {
   };
 
   useEffect(() => {
+    const checkNetwork = async () => {
+      try {
+        if (window.ethereum.networkVersion !== '4') {
+          alert("Please connect to Rinkeby!")
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
     checkIfWalletIsConnected();
-  }, []);
+
+    const fetchNFTMetadata = async () => {
+      console.log('Checking for Character NFT on address:', currentAccount);
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const gameContract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        myEpicGame.abi,
+        signer
+      );
+
+      const txn = await gameContract.checkIfUserHasNFT();
+      if (txn.name) {
+        console.log('User has character NFT');
+        setCharacterNFT(transformCharacterData(txn));
+      } else {
+        console.log('No character NFT found');
+      }
+    };
+
+    /*
+     * We only want to run this, if we have a connected wallet
+     */
+    if (currentAccount) {
+      console.log('CurrentAccount:', currentAccount);
+      fetchNFTMetadata();
+    }
+  }, [currentAccount]);
 
   // Render Methods
   const renderContent = () => {
